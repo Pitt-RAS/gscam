@@ -133,7 +133,7 @@ namespace gscam {
     // http://gstreamer.freedesktop.org/data/doc/gstreamer/head/pwg/html/section-types-definitions.html
     if (image_encoding_ == sensor_msgs::image_encodings::RGB8) {
         caps = gst_caps_new_simple( "video/x-raw", 
-            "format", G_TYPE_STRING, "RGB",
+            "format", G_TYPE_STRING, "RGBA",
             NULL); 
     } else if (image_encoding_ == sensor_msgs::image_encodings::MONO8) {
         caps = gst_caps_new_simple( "video/x-raw", 
@@ -144,7 +144,7 @@ namespace gscam {
     }
 #else
     if (image_encoding_ == sensor_msgs::image_encodings::RGB8) {
-        caps = gst_caps_new_simple( "video/x-raw-rgb", NULL,NULL); 
+        caps = gst_caps_new_simple( "video/x-raw-rgba", NULL,NULL);
     } else if (image_encoding_ == sensor_msgs::image_encodings::MONO8) {
         caps = gst_caps_new_simple("video/x-raw-gray", NULL, NULL);
     } else if (image_encoding_ == "jpeg") {
@@ -270,9 +270,11 @@ namespace gscam {
       // ROS_DEBUG("Getting data...");
 #if (GST_VERSION_MAJOR == 1)
       GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(sink_));
-      if(!sample) {
-        ROS_ERROR("Could not get gstreamer sample.");
-        break;
+      if(sample) {
+          // ROS_DEBUG("Got sample");
+      } else {
+          ROS_ERROR("Could not get gstreamer sample.");
+          break;
       }
       GstBuffer* buf = gst_sample_get_buffer(sample);
       GstMemory *memory = gst_buffer_get_memory(buf, 0);
@@ -288,16 +290,21 @@ namespace gscam {
 #endif
       GstClockTime bt = gst_element_get_base_time(pipeline_);
       // ROS_INFO("New buffer: timestamp %.6f %lu %lu %.3f",
-      //         GST_TIME_AS_USECONDS(buf->timestamp+bt)/1e6+time_offset_, buf->timestamp, bt, time_offset_);
+      //          GST_TIME_AS_USECONDS(buf->timestamp+bt)/1e6+time_offset_,
+      //          buf->timestamp,
+      //          bt,
+      //          time_offset_);
 
 
 #if 0
       GstFormat fmt = GST_FORMAT_TIME;
       gint64 current = -1;
 
-       Query the current position of the stream
-      if (gst_element_query_position(pipeline_, &fmt, &current)) {
+      // Query the current position of the stream
+      if (gst_element_query_position(pipeline_, fmt, &current)) {
           ROS_INFO_STREAM("Position "<<current);
+      } else {
+          ROS_WARN("Position query failed");
       }
 #endif
 
@@ -348,7 +355,7 @@ namespace gscam {
           // Complain if the returned buffer is smaller than we expect
           const unsigned int expected_frame_size =
               image_encoding_ == sensor_msgs::image_encodings::RGB8
-              ? width_ * height_ * 3
+              ? width_ * height_ * 4
               : width_ * height_;
 
           if (buf_size < expected_frame_size) {
@@ -365,7 +372,7 @@ namespace gscam {
           // Image data and metadata
           img->width = width_;
           img->height = height_;
-          img->encoding = image_encoding_;
+          img->encoding = sensor_msgs::image_encodings::RGBA8;
           img->is_bigendian = false;
           img->data.resize(expected_frame_size);
 
@@ -373,7 +380,7 @@ namespace gscam {
           // Since we're publishing shared pointers, we need to copy the image so
           // we can free the buffer allocated by gstreamer
           if (image_encoding_ == sensor_msgs::image_encodings::RGB8) {
-              img->step = width_ * 3;
+              img->step = width_ * 4;
           } else {
               img->step = width_;
           }

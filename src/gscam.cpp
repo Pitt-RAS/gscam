@@ -73,6 +73,7 @@ namespace gscam {
     nh_private_.param("sync_sink", sync_sink_, true);
     nh_private_.param("preroll", preroll_, false);
     nh_private_.param("use_gst_timestamps", use_gst_timestamps_, false);
+    nh_private_.param("timestamp_offset", timestamp_offset_, 0.0);
 
     nh_private_.param("reopen_on_eof", reopen_on_eof_, false);
 
@@ -341,6 +342,8 @@ namespace gscam {
           cinfo->header.stamp = ros::Time::now();
       }
       // ROS_INFO("Image time stamp: %.3f",cinfo->header.stamp.toSec());
+      cinfo->header.stamp += ros::Duration(timestamp_offset_);
+
       cinfo->header.frame_id = frame_id_;
       if (image_encoding_ == "jpeg") {
           sensor_msgs::CompressedImagePtr img(new sensor_msgs::CompressedImage());

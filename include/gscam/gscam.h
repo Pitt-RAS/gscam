@@ -44,6 +44,7 @@ namespace gscam {
     bool preroll_;
     bool reopen_on_eof_;
     bool use_gst_timestamps_;
+    double timestamp_offset_;
 
     // Camera publisher configuration
     std::string frame_id_;
